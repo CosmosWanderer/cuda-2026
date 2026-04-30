@@ -1,9 +1,9 @@
 #include "gemm_cublas.h"
-#include <cublas_v2.h>
 #include <cuda_runtime.h>
+#include <cublas_v2.h>
 
-static float *d_a = nullptr, *d_b = nullptr, *d_c = nullptr;
-static size_t allocated_a = 0, allocated_b = 0, allocated_c = 0;
+static float *d_A = nullptr, *d_B = nullptr, *d_C = nullptr;
+static size_t allocated_bytes = 0;
 static cublasHandle_t handle = nullptr;
 static bool initialized = false;
 
@@ -15,32 +15,27 @@ std::vector<float> GemmCUBLAS(const std::vector<float>& a, const std::vector<flo
         initialized = true;
     }
     
-    if (allocated_a < bytes) {
-        if (d_a) cudaFree(d_a);
-        cudaMalloc(&d_a, bytes);
-        allocated_a = bytes;
-    }
-    if (allocated_b < bytes) {
-        if (d_b) cudaFree(d_b);
-        cudaMalloc(&d_b, bytes);
-        allocated_b = bytes;
-    }
-    if (allocated_c < bytes) {
-        if (d_c) cudaFree(d_c);
-        cudaMalloc(&d_c, bytes);
-        allocated_c = bytes;
+    if (allocated_bytes < bytes) {
+        if (d_A) cudaFree(d_A);
+        if (d_B) cudaFree(d_B);
+        if (d_C) cudaFree(d_C);
+        
+        cudaMalloc(&d_A, bytes);
+        cudaMalloc(&d_B, bytes);
+        cudaMalloc(&d_C, bytes);
+        allocated_bytes = bytes;
     }
     
-    cublasSetMatrix(n, n, sizeof(float), a.data(), n, d_a, n);
-    cublasSetMatrix(n, n, sizeof(float), b.data(), n, d_b, n);
+    cudaMemcpy(d_A, a.data(), bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_B, b.data(), bytes, cudaMemcpyHostToDevice);
     
     const float alpha = 1.0f;
     const float beta = 0.0f;
     
-    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, n, n, n, &alpha, d_b, n, d_a, n, &beta, d_c, n);
+    cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, n, n, &alpha, d_B, n, d_A, n, &beta, d_C, n);
     
     std::vector<float> c(n * n);
-    cublasGetMatrix(n, n, sizeof(float), d_c, n, c.data(), n);
+    cudaMemcpy(c.data(), d_C, bytes, cudaMemcpyDeviceToHost);
     
     return c;
 }
