@@ -1,1 +1,17 @@
-Source file /home/crazyproger/sandbox/cuda-2026/3823B1FI3/4_naive_gemm_cuda/kurpiakov_aleksei/naive_gemm_cuda.cu not found
+/home/crazyproger/sandbox/cuda-2026/3823B1FI3/4_naive_gemm_cuda/kurpiakov_aleksei/naive_gemm_cuda.cu(6): error: explicit type is missing ("int" assumed)
+  __attribute__((global)) Kernel(float* vec_a, float* vec_b, float* vec_c, int n) {
+                          ^
+
+/home/crazyproger/sandbox/cuda-2026/3823B1FI3/4_naive_gemm_cuda/kurpiakov_aleksei/naive_gemm_cuda.cu(6): error: a __global__ function must have a void return type
+  __attribute__((global)) Kernel(float* vec_a, float* vec_b, float* vec_c, int n) {
+                 ^
+
+/home/crazyproger/sandbox/cuda-2026/3823B1FI3/4_naive_gemm_cuda/kurpiakov_aleksei/naive_gemm_cuda.cu(16): error: identifier "B" is undefined
+              sum += vec_a[tid_y * n + k] * B[k * n + tid_x];
+                                            ^
+
+/home/crazyproger/sandbox/cuda-2026/3823B1FI3/4_naive_gemm_cuda/kurpiakov_aleksei/naive_gemm_cuda.cu(59): error: explicit type is missing ("int" assumed)
+      static const size = (n - 31) / 32;
+                   ^
+
+4 errors detected in the compilation of "/home/crazyproger/sandbox/cuda-2026/3823B1FI3/4_naive_gemm_cuda/kurpiakov_aleksei/naive_gemm_cuda.cu".
