@@ -1,6 +1,8 @@
+#ifdef __GNUC__
 #pragma GCC optimize("Ofast")
 #pragma GCC optimize("unroll-loops")
-#pragma GCC target("avx, avx2, fma")
+#pragma GCC target("avx,avx2,fma")
+#endif
 
 #include <vector>
 #include <cmath>
