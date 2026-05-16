@@ -76,8 +76,10 @@ std::vector<float> GeluCUDA(const std::vector<float>& input) {
 
     cudaMemcpy(host_res + half1, d_c2, half2 * sizeof(float), cudaMemcpyDeviceToHost);
 
-    cudaFree(d_a1);   cudaFree(d_c1);
-    cudaFree(d_a2);   cudaFree(d_c2);
+    cudaFree(d_a1); 
+    cudaFree(d_c1);
+    cudaFree(d_a2); 
+    cudaFree(d_c2);
     cudaStreamDestroy(stream2);
 
     std::vector<float> result(host_res, host_res + n);

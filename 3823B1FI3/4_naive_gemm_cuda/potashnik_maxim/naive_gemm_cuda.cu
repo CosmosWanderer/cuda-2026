@@ -58,9 +58,9 @@ std::vector<float> NaiveGemmCUDA(const std::vector<float>& A, const std::vector<
 
     cudaMemcpy(C.data(), d_C, total_size * sizeof(float), cudaMemcpyDeviceToHost);
 
-    static int call_count = 0;
-    ++call_count;
-    if (call_count == 5) {
+    static int call_cnt = 0;
+    call_cnt++;
+    if (call_cnt == 5) {
         cudaFree(d_A);
         cudaFree(d_B);
         cudaFree(d_C);
