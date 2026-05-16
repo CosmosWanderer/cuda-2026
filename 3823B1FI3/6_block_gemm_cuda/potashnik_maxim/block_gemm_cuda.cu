@@ -1,14 +1,13 @@
 #include "block_gemm_cuda.h"
 #include <vector>
-#include <algorithm>
 
 /* Optimizations
-1. Tiled multiplication with shared memory (reduce global memory traffic)
-2. 2D thread blocks for better occupancy and coalesced access
+1. Tiled multiplication with shared memory
+2. 2D thread blocks (tile_dim x tile_dim)
 3. Loop unrolling inside tile
-4. Static device memory reuse across calls
-5. Boundary checks inside tiles to handle arbitrary matrix sizes
-6. Using __restrict__ to avoid aliasing
+4. Static device memory reuse
+5. cudaMemset on device
+6. __restrict__ pointers
 */
 
 const int tile_dim = 32;
@@ -26,40 +25,29 @@ __global__ void gemm_tiled_kernel(const float* __restrict__ A, const float* __re
 
     for (int t = 0; t < num_tiles; ++t) {
         int a_col = t * tile_dim + threadIdx.x;
-        if (row < N && a_col < N)
-            A_tile[threadIdx.y][threadIdx.x] = A[row * N + a_col];
-        else
-            A_tile[threadIdx.y][threadIdx.x] = 0.0f;
-
+        A_tile[threadIdx.y][threadIdx.x] = (row < N && a_col < N) ? A[row * N + a_col] : 0.0f;
         int b_row = t * tile_dim + threadIdx.y;
-        if (b_row < N && col < N)
-            B_tile[threadIdx.y][threadIdx.x] = B[b_row * N + col];
-        else
-            B_tile[threadIdx.y][threadIdx.x] = 0.0f;
-
+        B_tile[threadIdx.y][threadIdx.x] = (b_row < N && col < N) ? B[b_row * N + col] : 0.0f;
+        
         __syncthreads();
 
-        for (int k = 0; k < tile_dim; ++k) {
-            sum += A_tile[threadIdx.y][k] * B_tile[k][threadIdx.x];
-        }
-
-        __syncthreads();
+        #pragma unroll
+        for (int k = 0; k < tile_dim; ++k) sum += A_tile[threadIdx.y][k] * B_tile[k][threadIdx.x];
+        
+            __syncthreads();
     }
 
-    if (row < N && col < N) {
+    if (row < N && col < N)
         C[row * N + col] = sum;
-    }
 }
 
 std::vector<float> BlockGemmCUDA(const std::vector<float>& A, const std::vector<float>& B, int N) {
-    std::vector<float> C(N * N, 0.0f);
+    int total_size = N * N;
 
     static float* d_A = nullptr;
     static float* d_B = nullptr;
     static float* d_C = nullptr;
-    static int capacity = 0;   
-
-    int total_size = N * N;
+    static int capacity = 0;
 
     if (total_size > capacity) {
         if (capacity > 0) {
@@ -83,17 +71,8 @@ std::vector<float> BlockGemmCUDA(const std::vector<float>& A, const std::vector<
 
     gemm_tiled_kernel<<<gridDim, blockDim>>>(d_A, d_B, d_C, N);
 
+    std::vector<float> C(total_size);
     cudaMemcpy(C.data(), d_C, total_size * sizeof(float), cudaMemcpyDeviceToHost);
-
-    static int call_cnt = 0;
-    call_cnt++;
-    if (call_count == 5) {
-        cudaFree(d_A);
-        cudaFree(d_B);
-        cudaFree(d_C);
-        capacity = 0;
-        d_A = d_B = d_C = nullptr;
-    }
 
     return C;
 }
